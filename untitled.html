@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ONE+ Kullanım İstatistikleri</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: url('https://your-image-url.com/background.jpg') no-repeat center center fixed;
+            background-size: cover;
+        }
+
+        header {
+            background-color: rgba(253, 236, 236, 0.9);
+            color: indianred;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        main {
+            padding: 2rem;
+        }
+
+        #summary, #uploadAndStatistics {
+            background-color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 2rem;
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .chart-container {
+            width: 100%;
+            height: 400px;
+            margin-top: 2rem;
+        }
+
+        footer {
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            padding: 0.5rem;
+            position: fixed;
+            width: 100%;
+            bottom: 0;
+        }
+
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+
+        .icon {
+            margin-right: 0.5rem;
+        }
+
+        #dateRange {
+            font-weight: bold;
+            margin-top: 1rem;
+        }
+
+        #platformStats {
+            font-weight: bold;
+            margin-top: 1rem;
+        }
+
+        .chart-legend {
+            display: flex;
+            justify-content: center;
+            margin-top: 1rem;
+        }
+
+        .chart-legend div {
+            margin: 0 10px;
+            display: flex;
+            align-items: center;
+        }
+
+        .chart-legend i {
+            margin-right: 5px;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
+</head>
+<body>
+    <header>
+        <h1><i class="fas fa-chart-bar icon"></i>ONE+ Kullanım İstatistikleri</h1>
+    </header>
+    <main>
+        <section id="summary">
+            <h2><i class="fas fa-info-circle icon"></i>Nedir?</h2>
+            <p>One+ kullanım istatistiklerini içeren bir bilgilendirme sayfasıdır.</p>
+        </section>
+        <section id="uploadAndStatistics">
+            <h2><i class="fas fa-upload icon"></i>Giriş Sayıları</h2>
+            <input type="file" id="fileInput" accept=".xlsx, .xls">
+            <div id="errorMessage" class="error" style="display: none;"></div>
+            <div id="dateRange"></div>
+            <div id="platformStats"></div>
+            <div class="chart-container">
+                <canvas id="usageChart"></canvas>
+            </div>
+            <div class="chart-legend">
+                <div><i class="fas fa-apple-alt" style="color: rgba(54, 162, 235, 1);"></i> iOS</div>
+                <div><i class="fab fa-android" style="color: rgba(255, 99, 132, 1);"></i> Android</div>
+                <div><i class="fas fa-desktop" style="color: rgba(75, 192, 192, 1);"></i> Web</div>
+            </div>
+        </section>
+    </main>
+    <footer>
+        <p>&copy; Yildiz Tech</p>
+    </footer>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            var ctx = document.getElementById('usageChart').getContext('2d');
+            var usageChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['iOS', 'Android', 'Web'],
+                    datasets: [{
+                        data: [0, 0, 0],
+                        backgroundColor: [
+                            'rgba(54, 162, 235, 0.2)',  // iOS
+                            'rgba(255, 99, 132, 0.2)',  // Android
+                            'rgba(75, 192, 192, 0.2)'   // Web
+                        ],
+                        borderColor: [
+                            'rgba(54, 162, 235, 1)',  // iOS
+                            'rgba(255, 99, 132, 1)',  // Android
+                            'rgba(75, 192, 192, 1)'   // Web
+                        ],
+                        borderWidth: 0,
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                display: false
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    },
+                    elements: {
+                        point: {
+                            radius: 0
+                        }
+                    }
+                }
+            });
+
+            document.getElementById('fileInput').addEventListener('change', function(e) {
+                var file = e.target.files[0];
+                var errorMessage = document.getElementById('errorMessage');
+
+                if (file && /\.(xlsx|xls)$/.test(file.name)) {
+                    errorMessage.style.display = 'none';
+
+                    // Extract date range from file name
+                    var fileName = file.name.split('.')[0];
+                    var dateRange = fileName.match(/\d{2}\/\d{2}\/\d{4}-\d{2}\/\d{2}\/\d{4}/g);
+                    if (dateRange) {
+                        document.getElementById('dateRange').textContent = 'Tarih Aralığı: ' + dateRange.join(' - ');
+                    } else {
+                        document.getElementById('dateRange').textContent = 'Tarih Aralığı bulunamadı';
+                    }
+
+                    var reader = new FileReader();
+                    reader.onload = function(event) {
+                        try {
+                            var data = new Uint8Array(event.target.result);
+                            var workbook = XLSX.read(data, { type: 'array' });
+                            var firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                            var jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+
+                            var platforms = { 'iOS': 0, 'Android': 0, 'Web': 0 };
+                            var companies = new Set();
+
+                            jsonData.forEach(function(row, index) {
+                                if (index > 0) {  // Skip the header row
+                                    platforms[row[4]] += 1;
+                                    companies.add(row[1]);
+                                }
+                            });
+
+                            var companyName = companies.size === 1 ? Array.from(companies)[0] : 'Tüm şirketler';
+                            document.getElementById('platformStats').textContent = companyName + ' Giriş Sayıları: iOS - ' + platforms['iOS'] + ', Android - ' + platforms['Android'] + ', Web - ' + platforms['Web'];
+
+                            usageChart.data.datasets[0].data = [platforms['iOS'], platforms['Android'], platforms['Web']];
+                            usageChart.update();
+                        } catch (error) {
+                            console.error('Error processing file:', error);
+                            errorMessage.textContent = 'Error processing file. Please ensure it is in the correct format.';
+                            errorMessage.style.display = 'block';
+                        }
+                    };
+                    reader.readAsArrayBuffer(file);
+                } else {
+                    errorMessage.textContent = 'Invalid file type. Please upload an Excel file.';
+                    errorMessage.style.display = 'block';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
